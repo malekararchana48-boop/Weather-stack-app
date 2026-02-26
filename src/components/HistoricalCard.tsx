@@ -1,152 +1,187 @@
 import React, { useState } from 'react';
-import { format, parseISO } from 'date-fns';
-import type { HistoricalResponse } from '../types/weather';
-import { WeatherIcon, Droplets, Wind, Navigation } from './WeatherIcon';
-import { getUnitSymbol } from '../services/weatherApi';
-import { ChevronDown, ChevronUp, Calendar } from 'lucide-react';
+import { format, subDays } from 'date-fns';
+import { Calendar, Wind, Droplets, Gauge, Thermometer, History } from 'lucide-react';
+import type { HistoricalWeatherResponse, UnitType } from '../types/weather';
 
 interface HistoricalCardProps {
-  data: HistoricalResponse;
-  unit: 'm' | 'f' | 's';
+  data: HistoricalWeatherResponse;
+  unit: UnitType;
+  onDateChange: (date: string) => void;
 }
 
-export const HistoricalCard: React.FC<HistoricalCardProps> = ({ data, unit }) => {
-  const [expandedDate, setExpandedDate] = useState<string | null>(null);
-  const units = getUnitSymbol(unit);
-  const { location, historical, current } = data;
+const getUnitSymbol = (unit: UnitType): string => {
+  switch (unit) {
+    case 'f': return '°F';
+    case 's': return 'K';
+    default: return '°C';
+  }
+};
 
-  const historicalDays = Object.values(historical);
-
-  const toggleDate = (date: string) => {
-    setExpandedDate(expandedDate === date ? null : date);
+export const HistoricalCard: React.FC<HistoricalCardProps> = ({ 
+  data, 
+  unit, 
+  onDateChange 
+}) => {
+  const { location, historical } = data;
+  const unitSymbol = getUnitSymbol(unit);
+  
+  const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  
+  // Get the first historical day (there should be only one for single date query)
+  const historicalDay = Object.values(historical)[0];
+  
+  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newDate = e.target.value;
+    setSelectedDate(newDate);
+    onDateChange(newDate);
   };
 
+  const maxDate = format(new Date(), 'yyyy-MM-dd');
+  const minDate = format(subDays(new Date(), 365), 'yyyy-MM-dd');
+
   return (
-    <div className="fade-in">
-      <div className="glass-card" style={{ padding: '24px', marginBottom: '24px' }}>
-        <h2 style={{ fontSize: '1.5rem', fontWeight: 600, marginBottom: '4px' }}>
-          Historical Weather
-        </h2>
-        <p style={{ color: 'var(--text-secondary)' }}>
-          {location.name}, {location.country}
-        </p>
-        <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginTop: '4px' }}>
-          {historicalDays.length} day(s) of historical data
+    <div className="glass-card" style={{ padding: '2rem' }}>
+      {/* Header */}
+      <div style={{ marginBottom: '2rem' }}>
+        <h2 className="location-name">{location.name}</h2>
+        <p style={{ color: 'var(--text-muted)', fontSize: '0.9375rem' }}>
+          Historical Weather Data
         </p>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        {historicalDays.map((day) => {
-          const date = parseISO(day.date);
-          const avgHour = day.hourly[Math.floor(day.hourly.length / 2)];
-          const isExpanded = expandedDate === day.date;
+      {/* Date Selector */}
+      <div 
+        style={{ 
+          marginBottom: '2rem', 
+          padding: '1.5rem', 
+          background: 'var(--glass-bg-light)',
+          borderRadius: 'var(--radius-lg)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '1rem',
+          flexWrap: 'wrap'
+        }}
+      >
+        <History size={24} color="var(--accent-purple)" />
+        <div style={{ flex: 1, minWidth: '200px' }}>
+          <label 
+            style={{ 
+              display: 'block', 
+              fontSize: '0.875rem', 
+              color: 'var(--text-muted)', 
+              marginBottom: '0.5rem' 
+            }}
+          >
+            Select Date
+          </label>
+          <input
+            type="date"
+            value={selectedDate}
+            onChange={handleDateChange}
+            min={minDate}
+            max={maxDate}
+            className="glass-input"
+          />
+        </div>
+        <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>
+          Data available for past year
+        </div>
+      </div>
 
-          return (
-            <div
-              key={day.date}
-              className="glass-card"
-              style={{
-                padding: '20px',
-                cursor: 'pointer',
-                transition: 'all 0.3s ease',
-              }}
-              onClick={() => toggleDate(day.date)}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                  <div style={{ textAlign: 'center', minWidth: '60px' }}>
-                    <p style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
-                      {format(date, 'EEE')}
-                    </p>
-                    <p style={{ fontSize: '1.25rem', fontWeight: 700 }}>
-                      {format(date, 'd')}
-                    </p>
-                  </div>
-                  <WeatherIcon
-                    code={avgHour.weather_code}
-                    size={48}
-                  />
-                  <div>
-                    <p style={{ fontSize: '1.125rem', fontWeight: 600 }}>
-                      {avgHour.weather_descriptions[0]}
-                    </p>
-                    <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>
-                      {format(date, 'MMMM yyyy')}
-                    </p>
-                  </div>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.5rem', fontWeight: 300 }}>
-                    <span style={{ color: 'var(--text-primary)' }}>{Math.round(day.maxtemp)}°</span>
-                    <span style={{ color: 'var(--text-muted)' }}>/</span>
-                    <span style={{ color: 'var(--text-secondary)' }}>{Math.round(day.mintemp)}°</span>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px', color: 'var(--text-muted)' }}>
-                    {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-                  </div>
+      {historicalDay && (
+        <>
+          {/* Date Display */}
+          <div 
+            style={{ 
+              marginBottom: '2rem', 
+              textAlign: 'center',
+              padding: '1rem',
+              background: 'var(--glass-bg-light)',
+              borderRadius: 'var(--radius-lg)'
+            }}
+          >
+            <Calendar size={20} style={{ marginBottom: '0.5rem', color: 'var(--accent-blue)' }} />
+            <div style={{ fontSize: '1.25rem', fontWeight: 600 }}>
+              {format(parseInt(historicalDay.date) * 1000, 'EEEE, MMMM d, yyyy')}
+            </div>
+          </div>
+
+          {/* Temperature Summary */}
+          <div 
+            style={{ 
+              display: 'flex', 
+              justifyContent: 'center', 
+              gap: '3rem',
+              marginBottom: '2rem',
+              flexWrap: 'wrap'
+            }}
+          >
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>
+                High
+              </div>
+              <div style={{ fontSize: '2rem', fontWeight: 600, color: 'var(--accent-rose)' }}>
+                {Math.round(historicalDay.maxtemp)}{unitSymbol}
+              </div>
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>
+                Average
+              </div>
+              <div style={{ fontSize: '2rem', fontWeight: 600 }}>
+                {Math.round(historicalDay.avgtemp)}{unitSymbol}
+              </div>
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>
+                Low
+              </div>
+              <div style={{ fontSize: '2rem', fontWeight: 600, color: 'var(--accent-cyan)' }}>
+                {Math.round(historicalDay.mintemp)}{unitSymbol}
+              </div>
+            </div>
+          </div>
+
+          {/* Hourly Data Summary */}
+          <div style={{ marginTop: '2rem' }}>
+            <h3 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '1rem' }}>
+              Day Summary
+            </h3>
+            
+            <div className="stats-grid">
+              <div className="stat-item">
+                <Wind size={20} color="var(--accent-cyan)" style={{ marginBottom: '0.5rem' }} />
+                <div className="stat-label">Avg Wind</div>
+                <div className="stat-value">
+                  {Math.round(historicalDay.hourly.reduce((acc, h) => acc + h.wind_speed, 0) / historicalDay.hourly.length)} km/h
                 </div>
               </div>
 
-              {isExpanded && (
-                <div className="slide-in" style={{ marginTop: '20px', paddingTop: '20px', borderTop: '1px solid var(--glass-border)' }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '16px', marginBottom: '20px' }}>
-                    <div style={{ padding: '16px', background: 'rgba(255, 255, 255, 0.05)', borderRadius: '12px' }}>
-                      <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '4px' }}>Average Temp</p>
-                      <p style={{ fontSize: '1.25rem', fontWeight: 600 }}>{day.avgtemp}{units.temp}</p>
-                    </div>
-                    <div style={{ padding: '16px', background: 'rgba(255, 255, 255, 0.05)', borderRadius: '12px' }}>
-                      <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '4px' }}>UV Index</p>
-                      <p style={{ fontSize: '1.25rem', fontWeight: 600 }}>{day.uv_index}</p>
-                    </div>
-                    <div style={{ padding: '16px', background: 'rgba(255, 255, 255, 0.05)', borderRadius: '12px' }}>
-                      <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '4px' }}>Sun Hours</p>
-                      <p style={{ fontSize: '1.25rem', fontWeight: 600 }}>{day.sunhour}h</p>
-                    </div>
-                    <div style={{ padding: '16px', background: 'rgba(255, 255, 255, 0.05)', borderRadius: '12px' }}>
-                      <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '4px' }}>Moon Phase</p>
-                      <p style={{ fontSize: '1rem', fontWeight: 600 }}>{day.astro.moon_phase}</p>
-                    </div>
-                  </div>
-
-                  <h4 style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '12px' }}>
-                    Hourly Data
-                  </h4>
-                  <div style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '8px' }}>
-                    {day.hourly.map((hour, index) => (
-                      <div
-                        key={index}
-                        style={{
-                          minWidth: '100px',
-                          padding: '16px',
-                          background: 'rgba(255, 255, 255, 0.05)',
-                          borderRadius: '12px',
-                          textAlign: 'center',
-                        }}
-                      >
-                        <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '8px' }}>
-                          {hour.time}
-                        </p>
-                        <WeatherIcon code={hour.weather_code} size={32} />
-                        <p style={{ fontSize: '1.125rem', fontWeight: 600, marginTop: '8px' }}>
-                          {hour.temperature}°
-                        </p>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', marginTop: '4px', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                          <Droplets size={12} />
-                          {hour.precip}mm
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', marginTop: '4px', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                          <Wind size={12} />
-                          {hour.wind_speed}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+              <div className="stat-item">
+                <Droplets size={20} color="var(--accent-blue-light)" style={{ marginBottom: '0.5rem' }} />
+                <div className="stat-label">Avg Humidity</div>
+                <div className="stat-value">
+                  {Math.round(historicalDay.hourly.reduce((acc, h) => acc + h.humidity, 0) / historicalDay.hourly.length)}%
                 </div>
-              )}
+              </div>
+
+              <div className="stat-item">
+                <Gauge size={20} color="var(--accent-amber)" style={{ marginBottom: '0.5rem' }} />
+                <div className="stat-label">Sun Hours</div>
+                <div className="stat-value">{historicalDay.sunhour}h</div>
+              </div>
+
+              <div className="stat-item">
+                <Thermometer size={20} color="var(--accent-rose)" style={{ marginBottom: '0.5rem' }} />
+                <div className="stat-label">UV Index</div>
+                <div className="stat-value">{historicalDay.uv_index}</div>
+              </div>
             </div>
-          );
-        })}
-      </div>
+          </div>
+        </>
+      )}
     </div>
   );
 };
+
+export default HistoricalCard;

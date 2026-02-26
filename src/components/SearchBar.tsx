@@ -1,284 +1,135 @@
-import React, { useState, useCallback, useEffect } from 'react';
-import { Search, MapPin, SlidersHorizontal, X } from 'lucide-react';
-import type { SearchFilters, WeatherTab } from '../types/weather';
+import React, { useState, useCallback } from 'react';
+import { Search, MapPin, Thermometer } from 'lucide-react';
+import type { UnitType, WeatherTab } from '../types/weather';
 
 interface SearchBarProps {
-  onSearch: (query: string, filters: SearchFilters) => void;
-  onTabChange: (tab: WeatherTab) => void;
   activeTab: WeatherTab;
-  loading: boolean;
+  onSearch: (query: string, unit: UnitType) => void;
+  loading?: boolean;
 }
 
-const tabs: { id: WeatherTab; label: string }[] = [
-  { id: 'current', label: 'Current' },
-  { id: 'forecast', label: 'Forecast' },
-  { id: 'historical', label: 'Historical' },
-  { id: 'marine', label: 'Marine' },
-  { id: 'location', label: 'Location' },
-];
-
-const languages = [
-  { code: 'en', name: 'English' },
-  { code: 'es', name: 'Spanish' },
-  { code: 'fr', name: 'French' },
-  { code: 'de', name: 'German' },
-  { code: 'it', name: 'Italian' },
-  { code: 'pt', name: 'Portuguese' },
-  { code: 'ru', name: 'Russian' },
-  { code: 'zh', name: 'Chinese' },
-  { code: 'ja', name: 'Japanese' },
-  { code: 'ar', name: 'Arabic' },
-];
-
 export const SearchBar: React.FC<SearchBarProps> = ({
-  onSearch,
-  onTabChange,
   activeTab,
-  loading,
+  onSearch,
+  loading = false,
 }) => {
   const [query, setQuery] = useState('');
-  const [showFilters, setShowFilters] = useState(false);
-  const [filters, setFilters] = useState<SearchFilters>({
-    query: '',
-    unit: 'm',
-    language: 'en',
-  });
+  const [unit, setUnit] = useState<UnitType>('m');
 
   const handleSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();
     if (query.trim()) {
-      onSearch(query.trim(), filters);
+      onSearch(query.trim(), unit);
     }
-  }, [query, filters, onSearch]);
+  }, [query, unit, onSearch]);
 
-  const handleFilterChange = useCallback(<K extends keyof SearchFilters>(
-    key: K,
-    value: SearchFilters[K]
-  ) => {
-    setFilters(prev => ({ ...prev, [key]: value }));
-  }, []);
+  const getPlaceholder = () => {
+    switch (activeTab) {
+      case 'marine':
+        return 'Enter latitude, longitude (e.g., 40.7128,-74.0060)';
+      case 'location':
+        return 'Search for cities, countries...';
+      default:
+        return 'Search for a city (e.g., London, New York)';
+    }
+  };
 
-  const clearSearch = useCallback(() => {
-    setQuery('');
-  }, []);
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setShowFilters(false);
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  const unitOptions: { value: UnitType; label: string }[] = [
+    { value: 'm', label: '°C' },
+    { value: 'f', label: '°F' },
+    { value: 's', label: 'K' },
+  ];
 
   return (
-    <div className="glass-card" style={{ padding: '24px' }}>
-      <form onSubmit={handleSubmit}>
-        <div style={{ display: 'flex', gap: '12px', marginBottom: '20px' }}>
-          <div style={{ position: 'relative', flex: 1 }}>
-            <MapPin
-              size={20}
-              style={{
-                position: 'absolute',
-                left: '16px',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                color: 'var(--text-muted)',
-              }}
-            />
-            <input
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search for a city, coordinates, or location..."
-              className="glass-input"
-              style={{
-                width: '100%',
-                paddingLeft: '48px',
-                paddingRight: query ? '48px' : '20px',
-              }}
-              disabled={loading}
-            />
-            {query && (
-              <button
-                type="button"
-                onClick={clearSearch}
-                style={{
-                  position: 'absolute',
-                  right: '12px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  padding: '4px',
-                  color: 'var(--text-muted)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <X size={18} />
-              </button>
-            )}
+    <form onSubmit={handleSubmit} className="glass-card" style={{ padding: '1.5rem' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        {/* Search Input */}
+        <div style={{ position: 'relative' }}>
+          <Search 
+            size={20} 
+            style={{ 
+              position: 'absolute', 
+              left: '1rem', 
+              top: '50%', 
+              transform: 'translateY(-50%)',
+              color: 'var(--text-muted)'
+            }} 
+          />
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={getPlaceholder()}
+            className="glass-input"
+            style={{ paddingLeft: '3rem' }}
+            disabled={loading}
+          />
+          <MapPin 
+            size={18} 
+            style={{ 
+              position: 'absolute', 
+              right: '1rem', 
+              top: '50%', 
+              transform: 'translateY(-50%)',
+              color: 'var(--text-muted)'
+            }} 
+          />
+        </div>
+
+        {/* Controls Row */}
+        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
+          {/* Unit Selector */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Thermometer size={16} color="var(--text-muted)" />
+            <div style={{ display: 'flex', gap: '0.25rem' }}>
+              {unitOptions.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => setUnit(option.value)}
+                  style={{
+                    padding: '0.375rem 0.75rem',
+                    borderRadius: 'var(--radius-md)',
+                    border: 'none',
+                    background: unit === option.value 
+                      ? 'var(--accent-blue)' 
+                      : 'var(--glass-bg-light)',
+                    color: unit === option.value ? 'white' : 'var(--text-secondary)',
+                    fontSize: '0.875rem',
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                    transition: 'all var(--transition-fast)',
+                  }}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
           </div>
-          <button
-            type="button"
-            onClick={() => setShowFilters(!showFilters)}
-            className={`glass-button ${showFilters ? 'active' : ''}`}
-            style={{
-              background: showFilters
-                ? 'rgba(255, 255, 255, 0.15)'
-                : undefined,
-            }}
-          >
-            <SlidersHorizontal size={20} />
-            <span style={{ display: 'none' }}>@media (min-width: 640px) {{ display: 'inline' }}</span>
-            <span className="filter-text">Filters</span>
-          </button>
+
+          {/* Search Button */}
           <button
             type="submit"
-            className="glass-button primary"
             disabled={loading || !query.trim()}
+            className="glass-button"
+            style={{ marginLeft: 'auto' }}
           >
-            <Search size={20} />
-            <span>Search</span>
+            {loading ? (
+              <div 
+                className="loading-spinner" 
+                style={{ width: '16px', height: '16px', borderWidth: '2px' }} 
+              />
+            ) : (
+              <>
+                <Search size={18} />
+                Search
+              </>
+            )}
           </button>
         </div>
-
-        <div
-          style={{
-            display: 'flex',
-            gap: '8px',
-            flexWrap: 'wrap',
-            borderBottom: '1px solid var(--glass-border)',
-            paddingBottom: '16px',
-          }}
-        >
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => onTabChange(tab.id)}
-              className={`glass-tab ${activeTab === tab.id ? 'active' : ''}`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        {showFilters && (
-          <div
-            className="slide-in"
-            style={{
-              marginTop: '20px',
-              paddingTop: '20px',
-              borderTop: '1px solid var(--glass-border)',
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-              gap: '20px',
-            }}
-          >
-            <div>
-              <label
-                style={{
-                  display: 'block',
-                  fontSize: '13px',
-                  fontWeight: 500,
-                  color: 'var(--text-secondary)',
-                  marginBottom: '8px',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.5px',
-                }}
-              >
-                Unit System
-              </label>
-              <div
-                style={{
-                  display: 'flex',
-                  gap: '8px',
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  padding: '4px',
-                  borderRadius: '12px',
-                }}
-              >
-                {[
-                  { value: 'm', label: 'Metric', symbol: '°C' },
-                  { value: 'f', label: 'Imperial', symbol: '°F' },
-                  { value: 's', label: 'Scientific', symbol: 'K' },
-                ].map((unit) => (
-                  <button
-                    key={unit.value}
-                    type="button"
-                    onClick={() => handleFilterChange('unit', unit.value as 'm' | 'f' | 's')}
-                    style={{
-                      flex: 1,
-                      padding: '10px 16px',
-                      borderRadius: '10px',
-                      border: 'none',
-                      background: filters.unit === unit.value
-                        ? 'rgba(56, 189, 248, 0.3)'
-                        : 'transparent',
-                      color: filters.unit === unit.value
-                        ? 'var(--text-primary)'
-                        : 'var(--text-secondary)',
-                      fontSize: '14px',
-                      fontWeight: 500,
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease',
-                    }}
-                  >
-                    {unit.label}
-                    <span
-                      style={{
-                        display: 'block',
-                        fontSize: '11px',
-                        opacity: 0.7,
-                        marginTop: '2px',
-                      }}
-                    >
-                      {unit.symbol}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <label
-                style={{
-                  display: 'block',
-                  fontSize: '13px',
-                  fontWeight: 500,
-                  color: 'var(--text-secondary)',
-                  marginBottom: '8px',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.5px',
-                }}
-              >
-                Language
-              </label>
-              <select
-                value={filters.language}
-                onChange={(e) => handleFilterChange('language', e.target.value)}
-                className="glass-input"
-                style={{ width: '100%', cursor: 'pointer' }}
-              >
-                {languages.map((lang) => (
-                  <option
-                    key={lang.code}
-                    value={lang.code}
-                    style={{ background: '#1e1b4b', color: '#fff' }}
-                  >
-                    {lang.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-        )}
-      </form>
-    </div>
+      </div>
+    </form>
   );
 };
+
+export default SearchBar;

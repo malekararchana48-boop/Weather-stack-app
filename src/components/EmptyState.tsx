@@ -1,94 +1,50 @@
 import React from 'react';
-import { CloudSun, Search, MapPin, History, Waves, Compass } from 'lucide-react';
+import { Cloud, Search, History, Waves, Navigation } from 'lucide-react';
 import type { WeatherTab } from '../types/weather';
 
 interface EmptyStateProps {
-  activeTab: WeatherTab;
+  tab: WeatherTab;
 }
 
-const tabContent: Record<WeatherTab, { icon: React.ReactNode; title: string; description: string }> = {
+const tabConfig: Record<WeatherTab, { icon: React.ElementType; title: string; description: string }> = {
   current: {
-    icon: <CloudSun size={64} style={{ color: 'var(--accent-warm)' }} />,
-    title: 'Current Weather',
-    description: 'Search for a location to see the current weather conditions including temperature, humidity, wind, and more.',
+    icon: Cloud,
+    title: 'Search for a location',
+    description: 'Enter a city name to see current weather conditions',
   },
   forecast: {
-    icon: <Compass size={64} style={{ color: 'var(--accent-cool)' }} />,
-    title: 'Weather Forecast',
-    description: 'Get up to 14 days of weather forecast with hourly breakdowns for any location worldwide.',
+    icon: Search,
+    title: 'Get weather forecast',
+    description: 'Search for a location to see the 7-day forecast',
   },
   historical: {
-    icon: <History size={64} style={{ color: 'rgba(139, 92, 246, 0.9)' }} />,
-    title: 'Historical Weather',
-    description: 'Access historical weather data for any date. Great for research and planning.',
+    icon: History,
+    title: 'View historical data',
+    description: 'Select a location and date to see past weather',
   },
   marine: {
-    icon: <Waves size={64} style={{ color: 'var(--accent-success)' }} />,
-    title: 'Marine Weather',
-    description: 'Get detailed marine weather information including wave height, swell conditions, and water temperature.',
+    icon: Waves,
+    title: 'Check marine conditions',
+    description: 'Enter coordinates to see marine weather data',
   },
   location: {
-    icon: <MapPin size={64} style={{ color: 'var(--accent-danger)' }} />,
-    title: 'Location Search',
-    description: 'Search and discover locations worldwide. Find coordinates, timezone information, and more.',
+    icon: Navigation,
+    title: 'Find a location',
+    description: 'Search for cities and get location details',
   },
 };
 
-export const EmptyState: React.FC<EmptyStateProps> = ({ activeTab }) => {
-  const content = tabContent[activeTab];
-
+export const EmptyState: React.FC<EmptyStateProps> = ({ tab }) => {
+  const config = tabConfig[tab];
+  const Icon = config.icon;
+  
   return (
-    <div
-      className="glass-card fade-in"
-      style={{
-        padding: '64px 48px',
-        textAlign: 'center',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        gap: '24px',
-      }}
-    >
-      <div
-        style={{
-          padding: '24px',
-          background: 'rgba(255, 255, 255, 0.05)',
-          borderRadius: '24px',
-        }}
-      >
-        {content.icon}
-      </div>
-      <div>
-        <h3 style={{ fontSize: '1.5rem', fontWeight: 600, marginBottom: '12px' }}>
-          {content.title}
-        </h3>
-        <p
-          style={{
-            fontSize: '1rem',
-            color: 'var(--text-secondary)',
-            maxWidth: '400px',
-            lineHeight: 1.6,
-          }}
-        >
-          {content.description}
-        </p>
-      </div>
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          marginTop: '16px',
-          padding: '12px 24px',
-          background: 'rgba(255, 255, 255, 0.05)',
-          borderRadius: '12px',
-          fontSize: '0.875rem',
-          color: 'var(--text-muted)',
-        }}
-      >
-        <Search size={18} />
-        <span>Enter a location above to get started</span>
-      </div>
+    <div className="empty-state">
+      <Icon className="empty-state-icon" size={80} strokeWidth={1} />
+      <h3 className="empty-state-title">{config.title}</h3>
+      <p className="empty-state-description">{config.description}</p>
     </div>
   );
 };
+
+export default EmptyState;

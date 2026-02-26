@@ -1,45 +1,44 @@
 import { useState, useCallback } from 'react';
+import { weatherApi } from '../services/weatherApi';
 import type {
   CurrentWeatherResponse,
-  ForecastResponse,
-  HistoricalResponse,
-  MarineResponse,
+  ForecastWeatherResponse,
+  HistoricalWeatherResponse,
+  MarineWeatherResponse,
   LocationSearchResponse,
-  SearchFilters,
+  UnitType,
 } from '../types/weather';
-import {
-  getCurrentWeather,
-  getForecast,
-  getHistoricalWeather,
-  getHistoricalRange,
-  getMarineWeather,
-  searchLocations,
-} from '../services/weatherApi';
 
 interface UseWeatherReturn {
-  currentWeather: CurrentWeatherResponse | null;
-  forecast: ForecastResponse | null;
-  historical: HistoricalResponse | null;
-  marine: MarineResponse | null;
-  locations: LocationSearchResponse | null;
+  // Data states
+  currentData: CurrentWeatherResponse | null;
+  forecastData: ForecastWeatherResponse | null;
+  historicalData: HistoricalWeatherResponse | null;
+  marineData: MarineWeatherResponse | null;
+  locationData: LocationSearchResponse | null;
+  
+  // Loading and error states
   loading: boolean;
   error: string | null;
-  fetchCurrentWeather: (query: string, filters?: Partial<SearchFilters>) => Promise<void>;
-  fetchForecast: (query: string, days?: number, filters?: Partial<SearchFilters>) => Promise<void>;
-  fetchHistorical: (query: string, date: string, filters?: Partial<SearchFilters>) => Promise<void>;
-  fetchHistoricalRange: (query: string, startDate: string, endDate: string, filters?: Partial<SearchFilters>) => Promise<void>;
-  fetchMarine: (query: string, filters?: Partial<SearchFilters>) => Promise<void>;
+  
+  // Actions
+  fetchCurrentWeather: (query: string, unit?: UnitType) => Promise<void>;
+  fetchForecast: (query: string, days?: number, unit?: UnitType) => Promise<void>;
+  fetchHistorical: (query: string, date: string, unit?: UnitType) => Promise<void>;
+  fetchHistoricalRange: (query: string, startDate: string, endDate: string, unit?: UnitType) => Promise<void>;
+  fetchMarine: (lat: number, lon: number, unit?: UnitType) => Promise<void>;
+  fetchMarineForecast: (lat: number, lon: number, days?: number, unit?: UnitType) => Promise<void>;
   searchLocation: (query: string) => Promise<void>;
   clearError: () => void;
   clearData: () => void;
 }
 
-export function useWeather(): UseWeatherReturn {
-  const [currentWeather, setCurrentWeather] = useState<CurrentWeatherResponse | null>(null);
-  const [forecast, setForecast] = useState<ForecastResponse | null>(null);
-  const [historical, setHistorical] = useState<HistoricalResponse | null>(null);
-  const [marine, setMarine] = useState<MarineResponse | null>(null);
-  const [locations, setLocations] = useState<LocationSearchResponse | null>(null);
+export const useWeather = (): UseWeatherReturn => {
+  const [currentData, setCurrentData] = useState<CurrentWeatherResponse | null>(null);
+  const [forecastData, setForecastData] = useState<ForecastWeatherResponse | null>(null);
+  const [historicalData, setHistoricalData] = useState<HistoricalWeatherResponse | null>(null);
+  const [marineData, setMarineData] = useState<MarineWeatherResponse | null>(null);
+  const [locationData, setLocationData] = useState<LocationSearchResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -48,73 +47,51 @@ export function useWeather(): UseWeatherReturn {
   }, []);
 
   const clearData = useCallback(() => {
-    setCurrentWeather(null);
-    setForecast(null);
-    setHistorical(null);
-    setMarine(null);
-    setLocations(null);
+    setCurrentData(null);
+    setForecastData(null);
+    setHistoricalData(null);
+    setMarineData(null);
+    setLocationData(null);
     setError(null);
   }, []);
 
-  const fetchCurrentWeather = useCallback(async (
-    query: string,
-    filters: Partial<SearchFilters> = {}
-  ) => {
+  const fetchCurrentWeather = useCallback(async (query: string, unit: UnitType = 'm') => {
     setLoading(true);
     setError(null);
     try {
-      const data = await getCurrentWeather(
-        query,
-        filters.unit || 'm',
-        filters.language || 'en'
-      );
-      setCurrentWeather(data);
+      const data = await weatherApi.getCurrentWeather(query, unit);
+      setCurrentData(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch current weather');
+      setCurrentData(null);
     } finally {
       setLoading(false);
     }
   }, []);
 
-  const fetchForecast = useCallback(async (
-    query: string,
-    days: number = 7,
-    filters: Partial<SearchFilters> = {}
-  ) => {
+  const fetchForecast = useCallback(async (query: string, days: number = 7, unit: UnitType = 'm') => {
     setLoading(true);
     setError(null);
     try {
-      const data = await getForecast(
-        query,
-        days,
-        filters.unit || 'm',
-        filters.language || 'en'
-      );
-      setForecast(data);
+      const data = await weatherApi.getForecast(query, days, unit);
+      setForecastData(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch forecast');
+      setForecastData(null);
     } finally {
       setLoading(false);
     }
   }, []);
 
-  const fetchHistorical = useCallback(async (
-    query: string,
-    date: string,
-    filters: Partial<SearchFilters> = {}
-  ) => {
+  const fetchHistorical = useCallback(async (query: string, date: string, unit: UnitType = 'm') => {
     setLoading(true);
     setError(null);
     try {
-      const data = await getHistoricalWeather(
-        query,
-        date,
-        filters.unit || 'm',
-        filters.language || 'en'
-      );
-      setHistorical(data);
+      const data = await weatherApi.getHistorical(query, date, unit);
+      setHistoricalData(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch historical weather');
+      setError(err instanceof Error ? err.message : 'Failed to fetch historical data');
+      setHistoricalData(null);
     } finally {
       setLoading(false);
     }
@@ -124,41 +101,49 @@ export function useWeather(): UseWeatherReturn {
     query: string,
     startDate: string,
     endDate: string,
-    filters: Partial<SearchFilters> = {}
+    unit: UnitType = 'm'
   ) => {
     setLoading(true);
     setError(null);
     try {
-      const data = await getHistoricalRange(
-        query,
-        startDate,
-        endDate,
-        filters.unit || 'm',
-        filters.language || 'en'
-      );
-      setHistorical(data);
+      const data = await weatherApi.getHistoricalRange(query, startDate, endDate, unit);
+      setHistoricalData(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch historical weather range');
+      setError(err instanceof Error ? err.message : 'Failed to fetch historical data range');
+      setHistoricalData(null);
     } finally {
       setLoading(false);
     }
   }, []);
 
-  const fetchMarine = useCallback(async (
-    query: string,
-    filters: Partial<SearchFilters> = {}
+  const fetchMarine = useCallback(async (lat: number, lon: number, unit: UnitType = 'm') => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await weatherApi.getMarine(lat, lon, unit);
+      setMarineData(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch marine data');
+      setMarineData(null);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const fetchMarineForecast = useCallback(async (
+    lat: number,
+    lon: number,
+    days: number = 7,
+    unit: UnitType = 'm'
   ) => {
     setLoading(true);
     setError(null);
     try {
-      const data = await getMarineWeather(
-        query,
-        filters.unit || 'm',
-        filters.language || 'en'
-      );
-      setMarine(data);
+      const data = await weatherApi.getMarineForecast(lat, lon, days, unit);
+      setMarineData(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch marine weather');
+      setError(err instanceof Error ? err.message : 'Failed to fetch marine forecast');
+      setMarineData(null);
     } finally {
       setLoading(false);
     }
@@ -168,21 +153,22 @@ export function useWeather(): UseWeatherReturn {
     setLoading(true);
     setError(null);
     try {
-      const data = await searchLocations(query);
-      setLocations(data);
+      const data = await weatherApi.searchLocation(query);
+      setLocationData(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to search locations');
+      setError(err instanceof Error ? err.message : 'Failed to search location');
+      setLocationData(null);
     } finally {
       setLoading(false);
     }
   }, []);
 
   return {
-    currentWeather,
-    forecast,
-    historical,
-    marine,
-    locations,
+    currentData,
+    forecastData,
+    historicalData,
+    marineData,
+    locationData,
     loading,
     error,
     fetchCurrentWeather,
@@ -190,8 +176,11 @@ export function useWeather(): UseWeatherReturn {
     fetchHistorical,
     fetchHistoricalRange,
     fetchMarine,
+    fetchMarineForecast,
     searchLocation,
     clearError,
     clearData,
   };
-}
+};
+
+export default useWeather;
